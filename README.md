@@ -1,4 +1,55 @@
 pode
 ====
 
-Python Omniscient Debugger
+PODe stands for Python Omniscient Debugger.
+
+
+About
+=======
+
+It all began in 1969, when Bob Balzer implemented a version of omniscient debugging for Fortran.
+
+From [1]:
+"""
+ Omniscient debugging describes the concept that debuggers should know everything about the run of a program,
+ that they should remember every state change, and be able to present to you the value of any variable at any
+ point in time. Essentially, omniscient debugging means that you can go backwards in time.
+"""
+
+Inspired by the article "Omniscient Debbuging - an easier way to find program bugs" by Bil Lewis [1],
+I decided to explore the issue in Python.
+This project is an informal exploration on the subject.
+
+
+
+Architecture
+============
+
+ +----------+   +----------+    +-------+   +---------+
+ | Inferior |==>| Event    |==> | Event |<->|  Info   |
+ | Process  |   | Recorder |    |   DB  |   | Browser |
+ +----------+   +----------+    +-------+   +---------+
+
+ The process being debugged is called the *inferior process*.
+ The *event recorder* is responsible for monitoring the inferior processes to detect events.
+ These events are recorded in the *event database*.
+ The *info browser* queries the event database and displays information related to the recorded events.
+
+
+Strategies
+==========
+
+My first strategy is to leverage sys.settrace as the main hook in the Python Virtual Machine (PVM) to record events.
+A function registered with sys.settrace will act as event recorder.
+There can be many event database backends. The main requirement is support for fast data insertions (write operations).
+I will first explore Redis and Neo4J as backends.
+Moreover, I will use a regular web browser to build the *info browser*.
+
+
+References
+==========
+
+Several articles examined are included in the directory docs/external.
+
+[1] "Omniscient Debbuging - an easier way to find program bugs".
+     Bil Lewis. Dr. Dobbs Journal.   June 2005.
