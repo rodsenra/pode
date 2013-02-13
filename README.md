@@ -10,11 +10,10 @@ About
 It all began in 1969, when Bob Balzer implemented a version of omniscient debugging for Fortran.
 
 From [1]:
-"""
- Omniscient debugging describes the concept that debuggers should know everything about the run of a program,
- that they should remember every state change, and be able to present to you the value of any variable at any
- point in time. Essentially, omniscient debugging means that you can go backwards in time.
-"""
+
+> Omniscient debugging describes the concept that debuggers should know everything about the run of a program,
+> that they should remember every state change, and be able to present to you the value of any variable at any
+> point in time. Essentially, omniscient debugging means that you can go backwards in time.
 
 Inspired by the article "Omniscient Debbuging - an easier way to find program bugs" by Bil Lewis [1],
 I decided to explore the issue in Python.
@@ -25,15 +24,15 @@ This project is an informal exploration on the subject.
 Architecture
 ============
 
- +----------+   +----------+    +-------+   +---------+
- | Inferior |==>| Event    |==> | Event |<->|  Info   |
- | Process  |   | Recorder |    |   DB  |   | Browser |
- +----------+   +----------+    +-------+   +---------+
+    +----------+   +----------+    +-------+   +---------+
+    | Inferior |==>| Event    |==> | Event |<->|  Info   |
+    | Process  |   | Recorder |    |   DB  |   | Browser |
+    +----------+   +----------+    +-------+   +---------+
 
- The process being debugged is called the *inferior process*.
- The *event recorder* is responsible for monitoring the inferior processes to detect events.
- These events are recorded in the *event database*.
- The *info browser* queries the event database and displays information related to the recorded events.
+ The process being debugged is called the **inferior process**.
+ The **event recorder** is responsible for monitoring the inferior processes to detect events.
+ These events are recorded in the **event database**.
+ The **info browser** queries the event database and displays information related to the recorded events.
 
 
 Strategies
