@@ -7,7 +7,7 @@ of the Python Omniscient Debugger.
 The hook: sys.settrace
 ----------------------
 
-The function (sys.settrace)[http://docs.python.org/3/library/sys.html#sys.settrace] is used
+The function [sys.settrace](http://docs.python.org/3/library/sys.html#sys.settrace) is used
 to define a Python level function for debugging purposes.
 The function is thread specific, and must be set in all threads independently.
 
