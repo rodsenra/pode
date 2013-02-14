@@ -41,8 +41,17 @@ Strategies
 My first strategy is to leverage sys.settrace as the main hook in the Python Virtual Machine (PVM) to record events.
 A function registered with sys.settrace will act as event recorder.
 There can be many event database backends. The main requirement is support for fast data insertions (write operations).
-I will first explore Redis and Neo4J as backends.
-Moreover, I will use a regular web browser to build the *info browser*.
+I would like to explore Redis, ElasticSearch and Neo4J as backends.
+Moreover, I will use a regular Web browser to build the *info browser*.
+
+For the time being, we are not resorting to application code instrumentation.
+
+
+Related Work
+============
+
+TOD is a portable Trace-Oriented Debugger for Java integrated into the Eclipse IDE.
+See "Scalable Omniscient Debugging" by Guillaume Pothier, Éric Tanter and José Piquer.
 
 
 References

@@ -33,7 +33,8 @@ class Dejavu(object):
         record = (frame.f_lineno, 
                   frame.f_code.co_filename, 
                   frame.f_code.co_name)        
-        self.funcs[t] = record 
+        self.funcs[t] = record
+        pprint(record)
         return self.trace_dispatch
 
     def dispatch_return(self, frame, arg):

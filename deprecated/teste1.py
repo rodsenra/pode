@@ -9,7 +9,7 @@ def hipo(x,y):
    return math.sqrt(teste2.soma(x**2, y**2))
 
 if __name__=="__main__":
-    pairs = zip(range(3,8),range(4,9))
+    pairs = zip(range(3,8), range(4,9))
     for i,j  in pairs:
-        print(i,j,hipo(i,j))
+        print("result", i, j, hipo(i,j))
 
