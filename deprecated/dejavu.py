@@ -9,11 +9,8 @@ class Dejavu(object):
         self.calls = {}  # function call/return history
         self.locals = {}  # local var history
         self.globals = {} # globals history
-        self.quitting = False
-                 
+
     def trace_dispatch(self, frame, event, arg):
-        if self.quitting:
-            return # None
         if event == 'line':
             return self.dispatch_line(frame)
         if event == 'call':
@@ -32,6 +29,8 @@ class Dejavu(object):
                   frame.f_code.co_name)
         pprint(record)
         self.dump_asm(frame.f_lasti, frame.f_code)
+        self.fetch_opcodes(frame.f_lasti, frame.f_code)
+
         return self.trace_dispatch
 
     def dispatch_call(self, frame, arg):
@@ -75,9 +74,20 @@ class Dejavu(object):
         print("Line {0}".format(line))
         dis.disassemble(code)
 
-    def quit(self):
-        self.quitting = True
-        
+    def fetch_opcodes(self, line, co):
+        code = co.co_code
+        n = len(code)
+        linestarts = dict(dis.findlinestarts(co))
+        print "linestarts", linestarts
+        i = 0
+        while i < n:
+            c = code[i]
+            op = ord(c)
+            print "Op", dis.opname[op]
+            i = i + 1
+            if op >= dis.HAVE_ARGUMENT:
+                i = i + 2
+
 if __name__=="__main__":
     prog_name = sys.argv[1]
     dejavu = Dejavu()
@@ -85,10 +95,9 @@ if __name__=="__main__":
     prog_file = open(prog_name)
     exec prog_file
     sys.settrace(None)
-    dejavu.quit()
     # useful for interactive mode -i
     from pprint import pprint as pp
 
 # python -i dejavu.py teste1.py
-# dejavu.funcs 
+# >> pp(dejavu.calls)
 
