@@ -41,9 +41,9 @@ class Dejavu(object):
                   frame.f_code.co_filename,
                   frame.f_code.co_name)
         pprint(record)
-        self.dump_asm(frame.f_lasti, frame.f_code)
+        new_code = self.cut_asm(frame.f_lasti, frame.f_code)
         # schedule captures of variables
-        self.fetch_opcodes(frame.f_lasti, frame)
+        self.fetch_opcodes(frame.f_lasti, frame, new_code)
 
         return self.trace_dispatch
 
@@ -62,7 +62,7 @@ class Dejavu(object):
                   copy(arg))
         self.calls[t] = record
         pprint(record)
-        self.dump_asm(frame.f_lasti, frame.f_code)
+        self.cut_asm(frame.f_lasti, frame.f_code)
         return self.trace_dispatch
 
     def dispatch_return(self, frame, arg):
@@ -84,18 +84,49 @@ class Dejavu(object):
        h.sort()
        return h
 
-    def dump_asm(self, line, code):
-        print("Line {0}".format(line))
-        dis.disassemble(code)
+    def cut_asm(self, line, code):
+        if line >= 0:
+            codesize = len(code.co_code)
+            lines = list(dis.findlinestarts(code))
+            for pos, (asm_line, src_line) in enumerate(lines):
+                if line != asm_line:
+                    continue
+                else:
+                    if asm_line == lines[-1][0]:
+                        first,last = (asm_line, codesize)
+                    else:
+                        first,last = (asm_line, lines[pos+1][0])
+                    break
 
-    def fetch_opcodes(self, line, frame):
-        co = frame.f_code
+            codestr = code.co_code[first:last]
+        else:
+            codestr = code.co_code
+
+        # Rebuild code object
+        new_code = type(code)(code.co_argcount,
+                              code.co_nlocals,
+                              code.co_stacksize,
+                              code.co_flags,
+                              codestr,
+                              code.co_consts,
+                              code.co_names,
+                              code.co_varnames,
+                              code.co_filename,
+                              code.co_name,
+                              code.co_firstlineno,
+                              code.co_lnotab,
+                              code.co_freevars,
+                              code.co_cellvars)
+        dis.disassemble(new_code)
+        return new_code
+
+    def fetch_opcodes(self, line, frame, co):
+        # Obs: co may be != frame.f_code
         store_codes = [dis.opmap[i] for i in ('STORE_FAST',  'STORE_NAME')]
         # TODO: support 'STORE_GLOBAL', 'STORE_MAP','STORE_ATTR'
         code = co.co_code
         n = len(code)
         linestarts = dict(dis.findlinestarts(co))
-        print "linestarts", linestarts
         i = 0
         while i < n:
             c = code[i]
