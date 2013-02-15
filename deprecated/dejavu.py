@@ -5,23 +5,30 @@ from copy import copy
 from pprint import pprint
 from datetime import datetime
 
+# Event types
+EVENT_FUNC_CALL = 1
+EVENT_FUNC_RET = 2
+EVENT_VAR_ATTR = 3
+
 class Dejavu(object):
     def __init__(self):
-        self.calls = {}  # function call/return history
+        self.events = {}  # event history
         self.pending_captures = [] # variable names whose values need to be captured
 
     def trace_dispatch(self, frame, event, arg):
         if event == 'line':
             return self.dispatch_line(frame)
-        if event == 'call':
+        elif event == 'call':
             return self.dispatch_call(frame, arg)
-        if event == 'return':
+        elif event == 'return':
             return self.dispatch_return(frame, arg)
         return self.trace_dispatch
 
-    def emit(self, varname, value):
+    def emit(self, event_type, objname, value):
         t = datetime.now()
-        print "Event", t, varname, value
+        record = (t, event_type, objname, value)
+        self.events[t] = record
+        print "Event", record
 
     def dispatch_line(self, frame):
         # generate events for pending variables from previous lines
@@ -29,7 +36,7 @@ class Dejavu(object):
             varname = self.pending_captures.pop(0)
             try:
                 value = frame.f_locals[varname]
-                self.emit(varname, value)
+                self.emit(EVENT_VAR_ATTR, varname, value)
             except KeyError:
                 print "Ignoring", varname
                 # value not available yet, reschedule capture
@@ -41,6 +48,7 @@ class Dejavu(object):
                   frame.f_code.co_filename,
                   frame.f_code.co_name)
         pprint(record)
+
         new_code = self.cut_asm(frame.f_lasti, frame.f_code)
         # schedule captures of variables
         self.fetch_opcodes(frame.f_lasti, frame, new_code)
@@ -48,32 +56,29 @@ class Dejavu(object):
         return self.trace_dispatch
 
     def dispatch_call(self, frame, arg):
-        t = time()
         # Arg names are mixed with local variables, but come first in the list co_varnames
         arg_names = frame.f_code.co_varnames[:frame.f_code.co_argcount]
         call_params = {name:frame.f_locals[name] for name in arg_names} \
                       if (frame.f_code.co_name != '<module>') \
                       else ''
         record = (frame.f_lineno,
-                  "call",
                   frame.f_code.co_filename,
                   frame.f_code.co_name,
                   call_params,
                   copy(arg))
-        self.calls[t] = record
         pprint(record)
+
+        self.emit(EVENT_FUNC_CALL, frame.f_code.co_name, record)
         self.cut_asm(frame.f_lasti, frame.f_code)
         return self.trace_dispatch
 
     def dispatch_return(self, frame, arg):
         t = time()
         record = (frame.f_lineno,
-                  "ret",
-                  frame.f_code.co_filename, 
-                  frame.f_code.co_name,
-                  copy(arg))        
-        self.calls[t] = record
+                  frame.f_code.co_filename,
+                  copy(arg))
         pprint(record)
+        self.emit(EVENT_FUNC_RET, frame.f_code.co_name, record)
         return self.trace_dispatch
 
     def history(self, kind, entity):
