@@ -1,3 +1,5 @@
+# coding: utf-8
+
 import sys
 import dis
 from time import time
@@ -10,10 +12,14 @@ EVENT_FUNC_CALL = 1
 EVENT_FUNC_RET = 2
 EVENT_VAR_ATTR = 3
 
+
 class Dejavu(object):
-    def __init__(self):
-        self.events = {}  # event history
-        self.pending_captures = [] # variable names whose values need to be captured
+
+    def __init__(self, metadebug=False):
+        self.metadebug = metadebug
+        self.events = {}
+        # variable names whose values need to be captured asap
+        self.pending_captures = []
 
     def trace_dispatch(self, frame, event, arg):
         if event == 'line':
@@ -28,7 +34,8 @@ class Dejavu(object):
         t = datetime.now()
         record = (t, event_type, objname, value)
         self.events[t] = record
-        print "Event", record
+        if self.metadebug:
+            print("Event", record)
 
     def dispatch_line(self, frame):
         # generate events for pending variables from previous lines
@@ -38,38 +45,41 @@ class Dejavu(object):
                 value = frame.f_locals[varname]
                 self.emit(EVENT_VAR_ATTR, varname, value)
             except KeyError:
-                print "Ignoring", varname
-                # value not available yet, reschedule capture
-                #self.pending_captures.append(varname)
+                if self.metadebug:
+                    print "Ignoring", varname
+                    # value not available yet
                 break
 
-        record = (frame.f_lineno,
-                  "line",
-                  frame.f_code.co_filename,
-                  frame.f_code.co_name)
-        pprint(record)
-
         new_code = self.cut_asm(frame.f_lasti, frame.f_code)
-        # schedule captures of variables
-        self.fetch_opcodes(frame.f_lasti, frame, new_code)
+        self.schedule_capture(frame.f_lasti, frame, new_code)
+
+        if self.metadebug:
+            record = (frame.f_lineno,
+                      "line",
+                      frame.f_code.co_filename,
+                      frame.f_code.co_name)
+            pprint(record)
 
         return self.trace_dispatch
 
     def dispatch_call(self, frame, arg):
-        # Arg names are mixed with local variables, but come first in the list co_varnames
+        # Arg names are mixed with local variables,
+        #  but come first in the list co_varnames
         arg_names = frame.f_code.co_varnames[:frame.f_code.co_argcount]
-        call_params = {name:frame.f_locals[name] for name in arg_names} \
-                      if (frame.f_code.co_name != '<module>') \
-                      else ''
+        call_params = {name: frame.f_locals[name] for name in arg_names} \
+            if (frame.f_code.co_name != '<module>') \
+            else ''
+
         record = (frame.f_lineno,
                   frame.f_code.co_filename,
                   frame.f_code.co_name,
                   call_params,
                   copy(arg))
-        pprint(record)
-
         self.emit(EVENT_FUNC_CALL, frame.f_code.co_name, record)
         self.cut_asm(frame.f_lasti, frame.f_code)
+
+        if self.metadebug:
+            pprint(record)
         return self.trace_dispatch
 
     def dispatch_return(self, frame, arg):
@@ -77,17 +87,12 @@ class Dejavu(object):
         record = (frame.f_lineno,
                   frame.f_code.co_filename,
                   copy(arg))
-        pprint(record)
         self.emit(EVENT_FUNC_RET, frame.f_code.co_name, record)
-        return self.trace_dispatch
 
-    def history(self, kind, entity):
-       if kind not in ('locals','globals'):
-          raise AttributeError("Only locals or globals are supported")
-       struct = getattr(self, kind)
-       h = [(t,d[1].get(entity,None)) for t,d in struct.items()]
-       h.sort()
-       return h
+        if self.metadebug:
+            pprint(record)
+
+        return self.trace_dispatch
 
     def cut_asm(self, line, code):
         if line >= 0:
@@ -98,9 +103,9 @@ class Dejavu(object):
                     continue
                 else:
                     if asm_line == lines[-1][0]:
-                        first,last = (asm_line, codesize)
+                        first, last = (asm_line, codesize)
                     else:
-                        first,last = (asm_line, lines[pos+1][0])
+                        first, last = (asm_line, lines[pos+1][0])
                     break
 
             codestr = code.co_code[first:last]
@@ -122,11 +127,14 @@ class Dejavu(object):
                               code.co_lnotab,
                               code.co_freevars,
                               code.co_cellvars)
-        dis.disassemble(new_code)
+
+        if self.metadebug:
+            dis.disassemble(new_code)
+
         return new_code
 
-    def fetch_opcodes(self, line, frame, co):
-        # Obs: co may be != frame.f_code
+    def schedule_capture(self, line, frame, co):
+        # co param may be different from frame.f_code
         store_codes = [dis.opmap[i] for i in ('STORE_FAST',  'STORE_NAME')]
         # TODO: support 'STORE_GLOBAL', 'STORE_MAP','STORE_ATTR'
         code = co.co_code
@@ -140,8 +148,7 @@ class Dejavu(object):
             if op >= dis.HAVE_ARGUMENT:
                 i = i + 2
                 if op in store_codes:
-                    arg = (ord(code[i-1]) << 8) | ord(code[i-2])
-                    print "Op", dis.opname[op], arg
+                    arg = ord(code[i-2]) | (ord(code[i-1]) << 8)
                 if op == dis.opmap['STORE_FAST']:
                     varname = co.co_varnames[arg]
                     self.pending_captures.append(varname)
@@ -149,16 +156,24 @@ class Dejavu(object):
                     varname = co.co_names[arg]
                     self.pending_captures.append(varname)
 
-if __name__=="__main__":
-    prog_name = sys.argv[1]
+
+def main(py_file):
     dejavu = Dejavu()
+    #dejavu = Dejavu(metadebug=True)
     sys.settrace(dejavu.trace_dispatch)
-    prog_file = open(prog_name)
-    exec prog_file
-    sys.settrace(None)
+    try:
+        exec py_file
+    finally:
+        sys.settrace(None)
+        del dejavu
+
+if __name__ == "__main__":
+    module_name = sys.argv[1]
+    py_file = open(module_name)
+    main(py_file)
+    py_file.close()
     # useful for interactive mode -i
     from pprint import pprint as pp
 
 # python -i dejavu.py teste1.py
 # >> pp(dejavu.calls)
-
