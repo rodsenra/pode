@@ -3,12 +3,12 @@ import dis
 from time import time
 from copy import copy
 from pprint import pprint
+from datetime import datetime
 
 class Dejavu(object):
     def __init__(self):
         self.calls = {}  # function call/return history
-        self.locals = {}  # local var history
-        self.globals = {} # globals history
+        self.pending_captures = [] # variable names whose values need to be captured
 
     def trace_dispatch(self, frame, event, arg):
         if event == 'line':
@@ -19,17 +19,31 @@ class Dejavu(object):
             return self.dispatch_return(frame, arg)
         return self.trace_dispatch
 
+    def emit(self, varname, value):
+        t = datetime.now()
+        print "Event", t, varname, value
+
     def dispatch_line(self, frame):
-        t = time()
-        self.locals[t] = (frame.f_lineno, copy(frame.f_locals))
-        self.globals[t] = (frame.f_lineno, copy(frame.f_globals))
+        # generate events for pending variables from previous lines
+        while self.pending_captures:
+            varname = self.pending_captures.pop(0)
+            try:
+                value = frame.f_locals[varname]
+                self.emit(varname, value)
+            except KeyError:
+                print "Ignoring", varname
+                # value not available yet, reschedule capture
+                #self.pending_captures.append(varname)
+                break
+
         record = (frame.f_lineno,
                   "line",
                   frame.f_code.co_filename,
                   frame.f_code.co_name)
         pprint(record)
         self.dump_asm(frame.f_lasti, frame.f_code)
-        self.fetch_opcodes(frame.f_lasti, frame.f_code)
+        # schedule captures of variables
+        self.fetch_opcodes(frame.f_lasti, frame)
 
         return self.trace_dispatch
 
@@ -74,7 +88,10 @@ class Dejavu(object):
         print("Line {0}".format(line))
         dis.disassemble(code)
 
-    def fetch_opcodes(self, line, co):
+    def fetch_opcodes(self, line, frame):
+        co = frame.f_code
+        store_codes = [dis.opmap[i] for i in ('STORE_FAST',  'STORE_NAME')]
+        # TODO: support 'STORE_GLOBAL', 'STORE_MAP','STORE_ATTR'
         code = co.co_code
         n = len(code)
         linestarts = dict(dis.findlinestarts(co))
@@ -83,10 +100,18 @@ class Dejavu(object):
         while i < n:
             c = code[i]
             op = ord(c)
-            print "Op", dis.opname[op]
             i = i + 1
             if op >= dis.HAVE_ARGUMENT:
                 i = i + 2
+                if op in store_codes:
+                    arg = (ord(code[i-1]) << 8) | ord(code[i-2])
+                    print "Op", dis.opname[op], arg
+                if op == dis.opmap['STORE_FAST']:
+                    varname = co.co_varnames[arg]
+                    self.pending_captures.append(varname)
+                elif op == dis.opmap['STORE_NAME']:
+                    varname = co.co_names[arg]
+                    self.pending_captures.append(varname)
 
 if __name__=="__main__":
     prog_name = sys.argv[1]
