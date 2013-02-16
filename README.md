@@ -1,8 +1,9 @@
 pode
 ====
 
-PODe stands for Python Omniscient Debugger.
+**pode** stands for Python Omniscient Debugger.
 
+Feel free to join the discussion at pode_py@googlegroups.com .
 
 About
 =======
