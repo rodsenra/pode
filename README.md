@@ -3,7 +3,8 @@ pode
 
 **pode** stands for Python Omniscient Debugger.
 
-Feel free to join the discussion at pode_py@googlegroups.com .
+Feel free to join the discussion [via email](mailto:pode_py@googlegroups.com)
+or  browse the [discussion group](https://groups.google.com/forum/?fromgroups#!forum/pode_py).
 
 About
 =======
