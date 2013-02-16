@@ -55,6 +55,7 @@ Related Work
  * [pdb](http://docs.python.org/2/library/pdb.html)
  * [ipdb](http://pypi.python.org/pypi/ipdb)
  * [pydb](http://bashdb.sourceforge.net/pydb/)
+ * [pydbgr](http://code.google.com/p/pydbgr/)
  * [winpdb, rpdb2](http://winpdb.org/)
  * [TOD](http://pleiad.dcc.uchile.cl/tod/) is a portable Trace-Oriented Debugger for Java integrated into the Eclipse IDE.
    See "Scalable Omniscient Debugging" by Guillaume Pothier, Éric Tanter and José Piquer.
