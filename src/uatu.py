@@ -1,5 +1,9 @@
 # coding: utf-8
 
+__nversion__ = (0, 0, 1)
+__version__ = ".".join(str(i) for i in __nversion__)
+__author__ = "rodsenra"
+
 import sys
 import dis
 from time import time
@@ -11,6 +15,9 @@ from datetime import datetime
 EVENT_FUNC_CALL = 1
 EVENT_FUNC_RET = 2
 EVENT_VAR_ATTR = 3
+
+# There must be only one uatu!
+uatu = None
 
 
 class Uatu(object):
@@ -132,7 +139,6 @@ class Uatu(object):
         # TODO: support 'STORE_GLOBAL', 'STORE_MAP','STORE_ATTR'
         code = co.co_code
         n = len(code)
-        linestarts = dict(dis.findlinestarts(co))
         i = 0
         while i < n:
             c = code[i]
@@ -151,16 +157,18 @@ class Uatu(object):
 
 
 def install(metadebug):
-    uatu = Uatu(metadebug=metadebug)
-    sys.settrace(uatu.trace_dispatch)
+    global uatu
+    if uatu is None:
+        uatu = Uatu(metadebug=metadebug)
+        sys.settrace(uatu.trace_dispatch)
 
 
 def uninstall():
     sys.settrace(None)
 
 
-def main(py_file):
-    #uatu = Dejavu()
+def watch(py_file):
+    #uatu = Uatu()
     install(metadebug=True)
     try:
         exec py_file
@@ -172,10 +180,13 @@ def main(py_file):
 if __name__ == "__main__":
     module_name = sys.argv[1]
     py_file = open(module_name)
-    main(py_file)
+    watch(py_file)
     py_file.close()
     # useful for interactive mode -i
     from pprint import pprint as pp
 
-# python -i uatu.py samples/teste1.py
-# >> pp(dejavu.calls)
+# uatu.py must be in the PYTHONPATH
+# export PYTHONPATH=`pwd`/src:$PYTHONPATH
+# cd samples
+# python -i -m uatu teste0.py
+# >> pp(uatu.events)
