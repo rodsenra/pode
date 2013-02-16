@@ -12,19 +12,45 @@ from pprint import pprint
 from datetime import datetime
 
 # Event types
+EVENT_RESERVED = 0
 EVENT_FUNC_CALL = 1
 EVENT_FUNC_RET = 2
-EVENT_VAR_ATTR = 3
+EVENT_ASSIGN = 3
+
+EVENT_NAMES = ('reserved', 'call', 'return', 'assign')
 
 # There must be only one uatu!
 uatu = None
+
+
+class Event(object):
+    __slots__ = ('index', 'timestamp', 'event_type', 'obj_name', 'value')
+
+    def __init__(self, index, timestamp, event_type, obj_name, value):
+        self.index = index
+        self.timestamp = timestamp
+        self.event_type = event_type
+        self.obj_name = obj_name
+        self.value = value
+
+    def __unicode__(self):
+        return u"{0} {1:s} {2} {3} {4}".format(
+            self.index,
+            self.timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f"),
+            EVENT_NAMES[self.event_type],
+            self.obj_name,
+            self.value)
+
+    def __repr__(self):
+        return unicode(self)
 
 
 class Uatu(object):
 
     def __init__(self, metadebug=False):
         self.metadebug = metadebug
-        self.events = {}
+        self.event_index = -1
+        self.events = []
         # variable names whose values need to be captured asap
         self.pending_captures = []
 
@@ -38,11 +64,12 @@ class Uatu(object):
         return self.trace_dispatch
 
     def emit(self, event_type, objname, value):
+        self.event_index += 1
         t = datetime.now()
-        record = (t, event_type, objname, value)
-        self.events[t] = record
+        event = Event(self.event_index, t, event_type, objname, value)
+        self.events.append(event)
         if self.metadebug:
-            print("Event", record)
+            print("Event", event)
 
     def dispatch_line(self, frame):
         # generate events for pending variables from previous lines
@@ -50,7 +77,7 @@ class Uatu(object):
             varname = self.pending_captures.pop(0)
             try:
                 value = frame.f_locals[varname]
-                self.emit(EVENT_VAR_ATTR, varname, value)
+                self.emit(EVENT_ASSIGN, varname, value)
             except KeyError:
                 if self.metadebug:
                     print "Ignoring", varname
@@ -98,7 +125,8 @@ class Uatu(object):
             # ignore
             return code
 
-        codesize = len(code.co_code)
+        first = 0
+        last = codesize = len(code.co_code)
         lines = list(dis.findlinestarts(code))
         for pos, (asm_line, src_line) in enumerate(lines):
             if line != asm_line:
@@ -182,11 +210,11 @@ if __name__ == "__main__":
     py_file = open(module_name)
     watch(py_file)
     py_file.close()
-    # useful for interactive mode -i
+    # useful for interactive mode -i, and harmless otherwise
     from pprint import pprint as pp
 
 # uatu.py must be in the PYTHONPATH
 # export PYTHONPATH=`pwd`/src:$PYTHONPATH
 # cd samples
 # python -i -m uatu teste0.py
-# >> pp(uatu.events)
+# >>> pp(uatu.events)
