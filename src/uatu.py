@@ -13,7 +13,7 @@ EVENT_FUNC_RET = 2
 EVENT_VAR_ATTR = 3
 
 
-class Dejavu(object):
+class Uatu(object):
 
     def __init__(self, metadebug=False):
         self.metadebug = metadebug
@@ -76,10 +76,6 @@ class Dejavu(object):
                   call_params,
                   copy(arg))
         self.emit(EVENT_FUNC_CALL, frame.f_code.co_name, record)
-        self.cut_asm(frame.f_lasti, frame.f_code)
-
-        if self.metadebug:
-            pprint(record)
         return self.trace_dispatch
 
     def dispatch_return(self, frame, arg):
@@ -88,29 +84,26 @@ class Dejavu(object):
                   frame.f_code.co_filename,
                   copy(arg))
         self.emit(EVENT_FUNC_RET, frame.f_code.co_name, record)
-
-        if self.metadebug:
-            pprint(record)
-
         return self.trace_dispatch
 
     def cut_asm(self, line, code):
-        if line >= 0:
-            codesize = len(code.co_code)
-            lines = list(dis.findlinestarts(code))
-            for pos, (asm_line, src_line) in enumerate(lines):
-                if line != asm_line:
-                    continue
-                else:
-                    if asm_line == lines[-1][0]:
-                        first, last = (asm_line, codesize)
-                    else:
-                        first, last = (asm_line, lines[pos+1][0])
-                    break
+        if line == -1:
+            # ignore
+            return code
 
-            codestr = code.co_code[first:last]
-        else:
-            codestr = code.co_code
+        codesize = len(code.co_code)
+        lines = list(dis.findlinestarts(code))
+        for pos, (asm_line, src_line) in enumerate(lines):
+            if line != asm_line:
+                continue
+            else:
+                if asm_line == lines[-1][0]:
+                    first, last = (asm_line, codesize)
+                else:
+                    first, last = (asm_line, lines[pos+1][0])
+                break
+
+        codestr = code.co_code[first:last]
 
         # Rebuild code object
         new_code = type(code)(code.co_argcount,
@@ -157,15 +150,24 @@ class Dejavu(object):
                     self.pending_captures.append(varname)
 
 
+def install(metadebug):
+    uatu = Uatu(metadebug=metadebug)
+    sys.settrace(uatu.trace_dispatch)
+
+
+def uninstall():
+    sys.settrace(None)
+
+
 def main(py_file):
-    dejavu = Dejavu()
-    #dejavu = Dejavu(metadebug=True)
-    sys.settrace(dejavu.trace_dispatch)
+    #uatu = Dejavu()
+    install(metadebug=True)
     try:
         exec py_file
     finally:
+        # do not call uninstall to exit cleanly
         sys.settrace(None)
-        del dejavu
+
 
 if __name__ == "__main__":
     module_name = sys.argv[1]
@@ -175,5 +177,5 @@ if __name__ == "__main__":
     # useful for interactive mode -i
     from pprint import pprint as pp
 
-# python -i dejavu.py teste1.py
+# python -i uatu.py samples/teste1.py
 # >> pp(dejavu.calls)
