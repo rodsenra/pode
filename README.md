@@ -52,8 +52,11 @@ For the time being, we are not resorting to application code instrumentation.
 Related Work
 ============
 
-TOD is a portable Trace-Oriented Debugger for Java integrated into the Eclipse IDE.
-See "Scalable Omniscient Debugging" by Guillaume Pothier, Éric Tanter and José Piquer.
+ * [pdb](http://docs.python.org/2/library/pdb.html)
+ * [pydb](http://bashdb.sourceforge.net/pydb/)
+ * [winpdb, rpdb2](http://winpdb.org/)
+ * [TOD](http://pleiad.dcc.uchile.cl/tod/) is a portable Trace-Oriented Debugger for Java integrated into the Eclipse IDE.
+   See "Scalable Omniscient Debugging" by Guillaume Pothier, Éric Tanter and José Piquer.
 
 
 References
