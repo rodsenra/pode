@@ -55,7 +55,8 @@ Related Work
  * [pdb](http://docs.python.org/2/library/pdb.html)
  * [ipdb](http://pypi.python.org/pypi/ipdb)
  * [pydb](http://bashdb.sourceforge.net/pydb/)
- * [pydbgr](http://code.google.com/p/pydbgr/)
+    * [ddd](http://www.gnu.org/software/ddd/)
+    * [pydbgr](http://code.google.com/p/pydbgr/)
  * [pudb](http://pypi.python.org/pypi/pudb)
  * [winpdb, rpdb2](http://winpdb.org/)
  * [TOD](http://pleiad.dcc.uchile.cl/tod/) is a portable Trace-Oriented Debugger for Java integrated into the Eclipse IDE.
