@@ -1,6 +1,6 @@
 # coding: utf-8
 
-__nversion__ = (0, 0, 1)
+__nversion__ = (0, 0, 2)
 __version__ = ".".join(str(i) for i in __nversion__)
 __author__ = "rodsenra"
 
@@ -16,6 +16,10 @@ EVENT_RESERVED = 0
 EVENT_FUNC_CALL = 1
 EVENT_FUNC_RET = 2
 EVENT_ASSIGN = 3
+
+# CAPTURE_TYPES
+CAP_LOCAL = 1
+CAP_GLOBAL = 2
 
 EVENT_NAMES = ('reserved', 'call', 'return', 'assign')
 
@@ -51,7 +55,7 @@ class Uatu(object):
         self.metadebug = metadebug
         self.event_index = -1
         self.events = []
-        # variable names whose values need to be captured asap
+        # (variable names, scope) whose values need to be captured asap
         self.pending_captures = []
 
     def trace_dispatch(self, frame, event, arg):
@@ -71,19 +75,26 @@ class Uatu(object):
         if self.metadebug:
             print("Event", event)
 
-    def dispatch_line(self, frame):
+    def capture_value(self, frame):
         # generate events for pending variables from previous lines
         while self.pending_captures:
-            varname = self.pending_captures.pop(0)
+            varname, scope = self.pending_captures.pop(0)
             try:
-                value = frame.f_locals[varname]
-                self.emit(EVENT_ASSIGN, varname, value)
+                if scope == CAP_LOCAL:
+                    value = frame.f_locals[varname]
+                    self.emit(EVENT_ASSIGN, varname, value)
+                elif scope == CAP_GLOBAL:
+                    value = frame.f_globals[varname]
+                    self.emit(EVENT_ASSIGN, varname, value)
+
             except KeyError:
                 if self.metadebug:
                     print "Ignoring", varname
                     # value not available yet
                 break
 
+    def dispatch_line(self, frame):
+        self.capture_value(frame)
         new_code = self.cut_asm(frame.f_lasti, frame.f_code)
         self.schedule_capture(frame.f_lasti, frame, new_code)
 
@@ -135,7 +146,7 @@ class Uatu(object):
                 if asm_line == lines[-1][0]:
                     first, last = (asm_line, codesize)
                 else:
-                    first, last = (asm_line, lines[pos+1][0])
+                    first, last = (asm_line, lines[pos + 1][0])
                 break
 
         codestr = code.co_code[first:last]
@@ -163,8 +174,8 @@ class Uatu(object):
 
     def schedule_capture(self, line, frame, co):
         # co param may be different from frame.f_code
-        store_codes = [dis.opmap[i] for i in ('STORE_FAST',  'STORE_NAME')]
-        # TODO: support 'STORE_GLOBAL', 'STORE_MAP','STORE_ATTR'
+        store_codes = [dis.opmap[i] for i in ('STORE_FAST', 'STORE_NAME', 'STORE_GLOBAL')]
+        # TODO: support 'STORE_MAP','STORE_ATTR'
         code = co.co_code
         n = len(code)
         i = 0
@@ -175,13 +186,16 @@ class Uatu(object):
             if op >= dis.HAVE_ARGUMENT:
                 i = i + 2
                 if op in store_codes:
-                    arg = ord(code[i-2]) | (ord(code[i-1]) << 8)
+                    arg = ord(code[i - 2]) | (ord(code[i - 1]) << 8)
                 if op == dis.opmap['STORE_FAST']:
                     varname = co.co_varnames[arg]
-                    self.pending_captures.append(varname)
+                    self.pending_captures.append((varname, CAP_LOCAL))
+                elif op == dis.opmap['STORE_GLOBAL']:
+                    varname = co.co_names[arg]
+                    self.pending_captures.append((varname, CAP_GLOBAL))
                 elif op == dis.opmap['STORE_NAME']:
                     varname = co.co_names[arg]
-                    self.pending_captures.append(varname)
+                    self.pending_captures.append((varname, CAP_LOCAL))
 
 
 def install(metadebug):
@@ -199,7 +213,8 @@ def watch(py_file):
     #uatu = Uatu()
     install(metadebug=True)
     try:
-        exec py_file
+        # Create isolated dictionaries for globals() and locals() to be used by the inferior process
+        exec py_file in {}, {}
     finally:
         # do not call uninstall to exit cleanly
         sys.settrace(None)
