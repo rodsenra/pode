@@ -179,6 +179,7 @@ class Uatu(object):
         code = co.co_code
         n = len(code)
         i = 0
+        decoded = []  # List of (OPCODE, VALUE)
         while i < n:
             c = code[i]
             op = ord(c)
@@ -214,7 +215,8 @@ def watch(py_file):
     install(metadebug=True)
     try:
         # Create isolated dictionaries for globals() and locals() to be used by the inferior process
-        exec py_file in {}, {}
+        # When executed from command-line must emulate __main__ module __name__
+        exec py_file in globals() #{}, {'__name__':'__main__'}
     finally:
         # do not call uninstall to exit cleanly
         sys.settrace(None)
