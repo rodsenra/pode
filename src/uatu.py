@@ -11,6 +11,8 @@ from copy import copy
 from pprint import pprint
 from datetime import datetime
 
+import redis # pip install redis hiredis
+
 # Event types
 EVENT_RESERVED = 0
 EVENT_FUNC_CALL = 1
@@ -45,6 +47,9 @@ class Event(object):
             self.obj_name,
             self.value)
 
+    def set(self, redis):
+        redis.set(self.index, (self.timestamp, self.event_type, self.obj_name, self.value))
+
     def __repr__(self):
         return unicode(self)
 
@@ -52,6 +57,7 @@ class Event(object):
 class Uatu(object):
 
     def __init__(self, metadebug=False):
+        self.redis = redis.Redis(unix_socket_path='/tmp/redis.sock')
         self.metadebug = metadebug
         self.event_index = -1
         self.events = []
@@ -71,6 +77,7 @@ class Uatu(object):
         self.event_index += 1
         t = datetime.now()
         event = Event(self.event_index, t, event_type, objname, value)
+        event.set(self.redis)
         self.events.append(event)
         if self.metadebug:
             print("Event", event)
@@ -230,6 +237,17 @@ if __name__ == "__main__":
     # useful for interactive mode -i, and harmless otherwise
     from pprint import pprint as pp
 
+# if this is your first install, automatically load on login with:
+#     mkdir -p ~/Library/LaunchAgents
+#     cp /usr/local/Cellar/redis/2.4.17/homebrew.mxcl.redis.plist ~/Library/LaunchAgents/
+#     launchctl load -w ~/Library/LaunchAgents/homebrew.mxcl.redis.plist
+#      To start redis manually:
+#      redis-server /usr/local/etc/redis.conf
+#
+#      To access the server:
+#      redis-cli
+
+# /usr/local/bin/redis-server /usr/local/etc/redis.conf
 # uatu.py must be in the PYTHONPATH
 # export PYTHONPATH=`pwd`/src:$PYTHONPATH
 # cd samples
