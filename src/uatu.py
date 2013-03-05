@@ -10,6 +10,7 @@ from time import time
 from copy import copy
 from pprint import pprint
 from datetime import datetime
+from inspect import getfile
 
 import redis # pip install redis hiredis
 
@@ -68,7 +69,9 @@ class Event(object):
 class Uatu(object):
 
     def __init__(self, metadebug=False):
-        self.redis = redis.Redis(unix_socket_path='/tmp/redis.sock')
+        self.redis = redis.StrictRedis(unix_socket_path='/tmp/redis.sock')
+        self.redis.flushdb()
+
         self.metadebug = metadebug
         self.event_index = -1
         self.events = []
@@ -135,15 +138,23 @@ class Uatu(object):
             if (frame.f_code.co_name != '<module>') \
             else ''
 
-        record = (frame.f_lineno,
-                  frame.f_code.co_filename,
-                  frame.f_code.co_name,
-                  call_params,
-                  copy(arg))
+        p = getfile(frame)
+        print(">>>>" + p)
+        co_name = frame.f_code.co_name
+        if co_name == "<module>":
+            record = (frame.f_lineno,
+                      frame.f_code.co_filename)
+        else:
+            record = (frame.f_lineno,
+                      frame.f_code.co_filename,
+                      co_name,
+                      call_params,
+                      copy(arg))
         self.emit(EVENT_FUNC_CALL, frame.f_code.co_name, record)
         return self.trace_dispatch
 
     def dispatch_return(self, frame, arg):
+        self.capture_value(frame)
         t = time()
         record = (frame.f_lineno,
                   frame.f_code.co_filename,
