@@ -23,6 +23,17 @@ EVENT_ASSIGN = 3
 CAP_LOCAL = 1
 CAP_GLOBAL = 2
 
+# AUXILIARY EXTRACTION FUNCTIONS
+def _const_arg(co, arg):
+    return co.co_varnames[arg]
+
+def _name_arg(co, arg):
+    return co.co_names[arg]
+
+# Dictionary of fucntions to extract opcode argument values
+GET_ARGS = {dis.opmap["LOAD_CONST"]: _const_arg,
+            dis.opmap["LOAD_NAME"]: _name_arg,}
+
 EVENT_NAMES = ('reserved', 'call', 'return', 'assign')
 
 # There must be only one uatu!
@@ -93,6 +104,8 @@ class Uatu(object):
                 elif scope == CAP_GLOBAL:
                     value = frame.f_globals[varname]
                     self.emit(EVENT_ASSIGN, varname, value)
+                else:
+                    print "Ignored", varname
 
             except KeyError:
                 if self.metadebug:
@@ -181,12 +194,11 @@ class Uatu(object):
 
     def schedule_capture(self, line, frame, co):
         # co param may be different from frame.f_code
-        store_codes = [dis.opmap[i] for i in ('STORE_FAST', 'STORE_NAME', 'STORE_GLOBAL')]
+        store_codes = [dis.opmap[i] for i in ('LOAD_NAME', 'LOAD_CONST', 'STORE_FAST', 'STORE_NAME', 'STORE_GLOBAL')]
         # TODO: support 'STORE_MAP','STORE_ATTR'
         code = co.co_code
         n = len(code)
         i = 0
-        decoded = []  # List of (OPCODE, VALUE)
         while i < n:
             c = code[i]
             op = ord(c)
@@ -195,6 +207,7 @@ class Uatu(object):
                 i = i + 2
                 if op in store_codes:
                     arg = ord(code[i - 2]) | (ord(code[i - 1]) << 8)
+
                 if op == dis.opmap['STORE_FAST']:
                     varname = co.co_varnames[arg]
                     self.pending_captures.append((varname, CAP_LOCAL))
