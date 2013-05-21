@@ -54,6 +54,7 @@ Related Work
 
  * [pdb](http://docs.python.org/2/library/pdb.html)
  * [ipdb](http://pypi.python.org/pypi/ipdb)
+ * [epdb](https://code.google.com/p/epdb/) remarkable Reversible Debugger by Patrick Sabin
  * [pydb](http://bashdb.sourceforge.net/pydb/)
     * [ddd](http://www.gnu.org/software/ddd/)
     * [pydbgr](http://code.google.com/p/pydbgr/)
