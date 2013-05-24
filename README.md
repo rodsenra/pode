@@ -71,6 +71,8 @@ Several articles examined are included in the directory docs/external.
  * [1] "Omniscient Debbuging - an easier way to find program bugs".
         Bil Lewis. Dr. Dobbs Journal.   June 2005.
  * [2]  Epdb - [Code](http://code.google.com/p/epdb/) and [Thesis](http://www.complang.tuwien.ac.at/Diplomarbeiten/sabin11.pdf)
- * [3] Video at YouTube (in pt-br) with a presentation about this project.
-       http://youtu.be/MxzZXBI5T1s
+ * [3] [Video at YouTube](http://youtu.be/MxzZXBI5T1s) (in pt-br) with a presentation about this project
+ * [4] [EXDAMS](http://www.rand.org/content/dam/rand/pubs/research_memoranda/2009/RM5772.pdf)
+
+
     
