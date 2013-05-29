@@ -17,7 +17,7 @@ From [1]:
 > that they should remember every state change, and be able to present to you the value of any variable at any
 > point in time. Essentially, omniscient debugging means that you can go backwards in time.
 
-Inspired by the article "Omniscient Debbuging - an easier way to find program bugs" by Bil Lewis [1],
+Inspired by the article "Omniscient Debugging - an easier way to find program bugs" by Bil Lewis [1],
 I decided to explore the issue in Python.
 This project is an informal exploration on the subject.
 
